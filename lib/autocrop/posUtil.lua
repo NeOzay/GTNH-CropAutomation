@@ -1,4 +1,4 @@
-local config = require('config')
+local config = require('autocrop.config')
 
 -- ======================== WORKING FARM ========================
 --  _________________
@@ -8,7 +8,15 @@ local config = require('config')
 -- |34 27 22 15 10 03|
 -- |35 26 23 14 11 02|
 -- |36 25 24 13 12 01|
---  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+--  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾00‾
+
+local function posToWorkingSlot(x, y)
+    if y % 2 == 1 then
+        return (y - 1) * config.workingFarmSize + x
+    else
+        return (y - 1) * config.workingFarmSize + config.workingFarmSize - x + 1
+    end
+end
 
 local function workingSlotToPos(slot)
     local x = (slot - 1) // config.workingFarmSize
@@ -53,6 +61,7 @@ end
 
 
 return {
+    posToWorkingSlot = posToWorkingSlot,
     workingSlotToPos = workingSlotToPos,
-    storageSlotToPos = storageSlotToPos
+    storageSlotToPos = storageSlotToPos,
 }

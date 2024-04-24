@@ -3,12 +3,13 @@ local robot = require('robot')
 local sides = require('sides')
 local computer = require('computer')
 local os = require('os')
-local gps = require('gps')
-local config = require('config')
-local signal = require('signal')
-local scanner = require('scanner')
-local posUtil = require('posUtil')
-local database = require('database')
+
+local gps = require('autocrop.gps')
+local config = require('autocrop.config')
+local signal = require('autocrop.signal')
+local scanner = require('autocrop.scanner')
+local posUtil = require('autocrop.posUtil')
+local database = require('autocrop.database')
 local inventory_controller = component.inventory_controller
 
 
@@ -43,7 +44,7 @@ end
 
 local function restockStick()
     local selectedSlot = robot.select()
-
+    gps.save()
     gps.go(config.stickContainerPos)
     robot.select(robot.inventorySize()+config.stickSlot)
     for i=1, inventory_controller.getInventorySize(sides.down) do
@@ -52,7 +53,7 @@ local function restockStick()
             break
         end
     end
-
+    gps.restore()
     robot.select(selectedSlot)
 end
 
@@ -85,17 +86,15 @@ end
 
 
 local function placeCropStick(count)
-    if count == nil then
-        count = 1
-    end
+    count = count or 1
     local selectedSlot = robot.select()
     if robot.count(robot.inventorySize()+config.stickSlot) < count + 1 then
         restockStick()
     end
-    robot.select(robot.inventorySize()+config.stickSlot)
+    robot.select(robot.inventorySize() + config.stickSlot)
     inventory_controller.equip()
     for _=1, count do
-        robot.useDown()
+        robot.useDown(sides.up)
     end
     inventory_controller.equip()
     robot.select(selectedSlot)
@@ -113,12 +112,16 @@ local function deweed()
     if config.keepDrops then
         robot.suckDown()
     end
+    scanner.scan()
     inventory_controller.equip()
     robot.select(selectedSlot)
 end
 
-
-local function transplant(src, dest)
+---@param crop crop
+---@param target crop
+---@return boolean success
+---@overload fun(crop:crop, target:{x:number, y:number})
+local function transplant(crop, target)
     local selectedSlot = robot.select()
     gps.save()
     robot.select(robot.inventorySize()+config.binderSlot)
@@ -127,23 +130,23 @@ local function transplant(src, dest)
     -- TRANSFER TO RELAY LOCATION
     gps.go(config.dislocatorPos)
     robot.useDown(sides.down)
-    gps.go(src)
+    gps.go(crop.x, crop.y)
     robot.useDown(sides.down, true)
     gps.go(config.dislocatorPos)
     signal.pulseDown()
 
     -- TRANSFER CROP TO DESTINATION
     robot.useDown(sides.down, true)
-    gps.go(dest)
+    gps.go(target.x, target.y)
 
-    local crop = scanner.scan()
-    if crop.name == 'air' then
+    local locate = scanner.scan()
+    if locate.name == 'air' then
         placeCropStick()
-
-    elseif crop.isCrop == false then
-        database.addToStorage(crop)
-        gps.go(posUtil.storageSlotToPos(database.nextStorageSlot()))
-        placeCropStick()
+    elseif locate.isCrop == false then
+        print('transplant failed at x:', locate.x, 'y:', locate.y)
+        gps.restore()
+        robot.select(selectedSlot)
+        return false
     end
 
     robot.useDown(sides.down, true)
@@ -158,36 +161,12 @@ local function transplant(src, dest)
         robot.suckDown()
     end
 
-    gps.resume()
+    database.copy(crop, target.x, target.y)
+    gps.restore()
     robot.select(selectedSlot)
+    return true
 end
 
-
-local function cleanUp()
-    for slot=1, config.workingFarmArea, 1 do
-
-        -- Scan
-        gps.go(posUtil.workingSlotToPos(slot))
-        local crop = scanner.scan()
-
-        -- Remove all children and empty parents
-        if slot % 2 == 0 or crop.name == 'emptyCrop' then
-            robot.swingDown()
-
-        -- Remove bad parents
-        elseif crop.isCrop and crop.name ~= 'air' then
-            if scanner.isWeed(crop, 'working') then
-                robot.swingDown()
-            end
-        end
-
-        -- Pickup
-        if config.KeepDrops then
-            robot.suckDown()
-        end
-    end
-    restockAll()
-end
 
 
 return {
@@ -199,5 +178,4 @@ return {
     placeCropStick = placeCropStick,
     deweed = deweed,
     transplant = transplant,
-    cleanUp = cleanUp
 }

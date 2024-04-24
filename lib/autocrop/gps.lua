@@ -1,5 +1,6 @@
 local robot = require('robot')
 local nowFacing = 1
+---@type {[1]:number, [2]:number}
 local nowPos = {0, 0}
 local savedPos = {}
 
@@ -10,7 +11,7 @@ end
 
 
 local function getPos()
-    return nowPos
+    return nowPos[1], nowPos[2]
 end
 
 
@@ -46,14 +47,19 @@ local function turningDelta(facing)
     end
 end
 
-
-local function go(pos)
-    if nowPos[1] == pos[1] and nowPos[2] == pos[2] then
+---@param x number
+---@param y number
+---@overload fun(pos:{[1]:number, [2]:number})
+local function go(x, y)
+    if type(x) == "table" then
+        x, y = x[1], x[2]
+    end
+    if nowPos[1] == x and nowPos[2] == y then
         return
     end
 
     -- Find path
-    local posDelta = {pos[1]-nowPos[1], pos[2]-nowPos[2]}
+    local posDelta = {x-nowPos[1], y-nowPos[2]}
     local path = {}
 
     if posDelta[1] > 0 then
@@ -80,7 +86,13 @@ local function go(pos)
         end
     end
 
-    nowPos = pos
+    nowPos[1] = x
+    nowPos[2] = y
+end
+
+local function goHome()
+    go(0,0)
+    turnTo(1)
 end
 
 
@@ -105,11 +117,11 @@ end
 
 
 local function save()
-    savedPos[#savedPos+1] = nowPos
+    savedPos[#savedPos+1] = {nowPos[1], nowPos[2]}
 end
 
-
-local function resume()
+---resume to the last saved position
+local function restore()
     if #savedPos == 0 then
         return
     end
@@ -124,7 +136,8 @@ return {
     turnTo = turnTo,
     go = go,
     save = save,
-    resume = resume,
+    restore = restore,
     down = down,
-    up = up
+    up = up,
+    goHome = goHome,
 }
