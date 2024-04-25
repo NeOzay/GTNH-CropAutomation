@@ -77,20 +77,18 @@ function manager.resetNexPlot()
 	last = nil
 end
 
-local firstStorage = Plot.new(2, 9, (16 - (config.workingFarmSize + 1)), 16)
-local secondStorage = Plot.new(-8, -1, config.workingFarmSize + 1, 16 - (config.workingFarmSize + 1))
+local firstStorage = Plot.new(2, 9, 6, -16)
+local secondStorage = Plot.new(-8, -1, 10, -6)
 
 ---@type table<number, fun():x:number, y:number, cropType:string?>
 local storageAvaliable = { firstStorage:Iterator(), secondStorage:Iterator() }
 
 local function getFreeStorageSlot()
 	local iterator = storageAvaliable[1]
-	print("getFreeStorageSlot", iterator)
 	if not iterator then
 		return
 	end
 	local x, y = iterator()
-	print("getFreeStorageSlot", x, y)
 	if x and y then
 		return x, y
 	end
@@ -106,8 +104,8 @@ end
 
 --get a storage slot for a crop
 ---@param crop crop
----@return number?
----@return number?
+---@return number? x
+---@return number? y
 function manager.reserveStorageSlot(crop)
 	local x, y = getFreeStorageSlot()
 	if x and y then
@@ -115,6 +113,10 @@ function manager.reserveStorageSlot(crop)
 		db.copy(crop, x, y)
 		return x, y
 	end
+end
+
+function manager.readyForNextRound()
+	
 end
 
 return manager

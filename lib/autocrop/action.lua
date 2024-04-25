@@ -42,18 +42,22 @@ local function charge()
 end
 
 
-local function restockStick()
+local function restockStick(comeBack)
     local selectedSlot = robot.select()
-    gps.save()
+    if comeBack then
+        gps.save()
+    end
     gps.go(config.stickContainerPos)
-    robot.select(robot.inventorySize()+config.stickSlot)
+    robot.select(config.stickSlot)
     for i=1, inventory_controller.getInventorySize(sides.down) do
         inventory_controller.suckFromSlot(sides.down, i, 64-robot.count())
         if robot.count() == 64 then
             break
         end
     end
-    gps.restore()
+    if comeBack then
+        gps.restore()
+    end
     robot.select(selectedSlot)
 end
 
@@ -62,7 +66,7 @@ local function dumpInventory()
     local selectedSlot = robot.select()
 
     gps.go(config.storagePos)
-    for i=1, (robot.inventorySize() + config.storageStopSlot) do
+    for i=1, (config.storageStopSlot) do
         if robot.count(i) > 0 then
             robot.select(i)
             for e=1, inventory_controller.getInventorySize(sides.down) do
@@ -88,10 +92,10 @@ end
 local function placeCropStick(count)
     count = count or 1
     local selectedSlot = robot.select()
-    if robot.count(robot.inventorySize()+config.stickSlot) < count + 1 then
-        restockStick()
+    if robot.count(config.stickSlot) < count + 1 then
+        restockStick(true)
     end
-    robot.select(robot.inventorySize() + config.stickSlot)
+    robot.select(config.stickSlot)
     inventory_controller.equip()
     for _=1, count do
         robot.useDown(sides.up)
@@ -106,7 +110,7 @@ local function deweed()
     if config.keepDrops and fullInventory() then
         dumpInventory()
     end
-    robot.select(robot.inventorySize()+config.spadeSlot)
+    robot.select(config.spadeSlot)
     inventory_controller.equip()
     robot.useDown()
     if config.keepDrops then
@@ -124,7 +128,7 @@ end
 local function transplant(crop, target)
     local selectedSlot = robot.select()
     gps.save()
-    robot.select(robot.inventorySize()+config.binderSlot)
+    robot.select(config.binderSlot)
     inventory_controller.equip()
 
     -- TRANSFER TO RELAY LOCATION

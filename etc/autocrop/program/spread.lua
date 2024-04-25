@@ -35,6 +35,7 @@ local function checkChild(plot, crop)
 				-- No parent is empty, put in storage
 			else
 				local x, y = manager.reserveStorageSlot(crop)
+				print("reserveStorageSlot x, y", x, y)
 				if not (x and y) then
 					print('no slot available, the storage is full!')
 					running = false
